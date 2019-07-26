@@ -651,7 +651,12 @@ namespace MP2RandoAssist
             try
             {
                 if (!Game_Code.StartsWith("G2M"))
+                {
+                    new Thread(() => MessageBox.Show("Either Dolphin or the game is not running!\r\nExiting...")).Start();
+                    this.Close();
+                    this.Exiting = true;
                     return;
+                }
                 if (!IsPlayerIngame)
                     return;
                 this.label4.Text = "HP : " + Health + " / " + MaxHealth;
@@ -707,8 +712,8 @@ namespace MP2RandoAssist
                 if (!this.Exiting)
                 {
                     new Thread(() => MessageBox.Show("Either Dolphin or the game is not running!\r\nExiting...")).Start();
-                    this.Exiting = true;
                     this.Close();
+                    this.Exiting = true;
                 }
             }
         }
