@@ -76,6 +76,18 @@ namespace MP2RandoAssist
         internal const long OFF_GRAVITYBOOST_OBTAINED = 0x190;
         internal const long OFF_SCREWATTACK_OBTAINED = 0x19F;
         internal const long OFF_SEEKERMISSILE_OBTAINED = 0x1AB;
+        internal const long OFF_SKY_TEMPLE_KEY_1_OBTAINED = 0x1C3;
+        internal const long OFF_SKY_TEMPLE_KEY_2_OBTAINED = OFF_SKY_TEMPLE_KEY_1_OBTAINED + 0x0C;
+        internal const long OFF_SKY_TEMPLE_KEY_3_OBTAINED = OFF_SKY_TEMPLE_KEY_2_OBTAINED + 0x0C;
+        internal const long OFF_DARK_AGON_KEY_1_OBTAINED = 0x1E7;
+        internal const long OFF_DARK_AGON_KEY_2_OBTAINED = OFF_DARK_AGON_KEY_1_OBTAINED +0x0C;
+        internal const long OFF_DARK_AGON_KEY_3_OBTAINED = OFF_DARK_AGON_KEY_2_OBTAINED + 0x0C;
+        internal const long OFF_DARK_TORVUS_KEY_1_OBTAINED = OFF_DARK_AGON_KEY_3_OBTAINED + 0x0C;
+        internal const long OFF_DARK_TORVUS_KEY_2_OBTAINED = OFF_DARK_TORVUS_KEY_1_OBTAINED + 0x0C;
+        internal const long OFF_DARK_TORVUS_KEY_3_OBTAINED = OFF_DARK_TORVUS_KEY_2_OBTAINED + 0x0C;
+        internal const long OFF_ING_HIVE_KEY_1_OBTAINED = OFF_DARK_TORVUS_KEY_3_OBTAINED + 0x0C;
+        internal const long OFF_ING_HIVE_KEY_2_OBTAINED = OFF_ING_HIVE_KEY_1_OBTAINED + 0x0C;
+        internal const long OFF_ING_HIVE_KEY_3_OBTAINED = OFF_ING_HIVE_KEY_2_OBTAINED + 0x0C;
         internal const long OFF_ENERGYTANKS = 0x25B;
         internal const long OFF_MAX_ENERGYTANKS = OFF_ENERGYTANKS + 4;
         internal const long OFF_POWERBOMBS = 0x267;
@@ -90,6 +102,13 @@ namespace MP2RandoAssist
         internal const long OFF_AMBER_TRANSLATOR_OBTAINED = 0x4FF;
         internal const long OFF_EMERALD_TRANSLATOR_OBTAINED = 0x50B;
         internal const long OFF_COBALT_TRANSLATOR_OBTAINED = 0x517;
+        internal const long OFF_SKY_TEMPLE_KEY_4_OBTAINED = 0x523;
+        internal const long OFF_SKY_TEMPLE_KEY_5_OBTAINED = OFF_SKY_TEMPLE_KEY_4_OBTAINED + 0x0C;
+        internal const long OFF_SKY_TEMPLE_KEY_6_OBTAINED = OFF_SKY_TEMPLE_KEY_5_OBTAINED + 0x0C;
+        internal const long OFF_SKY_TEMPLE_KEY_7_OBTAINED = OFF_SKY_TEMPLE_KEY_6_OBTAINED + 0x0C;
+        internal const long OFF_SKY_TEMPLE_KEY_8_OBTAINED = OFF_SKY_TEMPLE_KEY_7_OBTAINED + 0x0C;
+        internal const long OFF_SKY_TEMPLE_KEY_9_OBTAINED = OFF_SKY_TEMPLE_KEY_8_OBTAINED + 0x0C;
+        internal const long OFF_ENERGY_TRANSFER_MODULE_OBTAINED = 0x56B;
         #endregion
 
         #region C Imports
@@ -621,6 +640,90 @@ namespace MP2RandoAssist
                 MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_COBALT_TRANSLATOR_OBTAINED, (byte)(value ? 1 : 0));
             }
         }
+
+        internal bool HaveEnergyTransferModule
+        {
+            get
+            {
+                return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_ENERGY_TRANSFER_MODULE_OBTAINED) > 0;
+            }
+            set
+            {
+                MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_ENERGY_TRANSFER_MODULE_OBTAINED, (byte)(value ? 1 : 0));
+            }
+        }
+
+        internal bool SkyTempleKeys(int index)
+        {
+            switch(index)
+            {
+                case 0:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_1_OBTAINED) > 0;
+                case 1:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_2_OBTAINED) > 0;
+                case 2:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_3_OBTAINED) > 0;
+                case 3:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_4_OBTAINED) > 0;
+                case 4:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_5_OBTAINED) > 0;
+                case 5:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_6_OBTAINED) > 0;
+                case 6:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_7_OBTAINED) > 0;
+                case 7:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_8_OBTAINED) > 0;
+                case 8:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_SKY_TEMPLE_KEY_9_OBTAINED) > 0;
+                default:
+                    throw new Exception("Invalid sky temple key requested");
+            }
+        }
+
+        internal bool DarkAgonKeys(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_DARK_AGON_KEY_1_OBTAINED) > 0;
+                case 1:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_DARK_AGON_KEY_2_OBTAINED) > 0;
+                case 2:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_DARK_AGON_KEY_3_OBTAINED) > 0;
+                default:
+                    throw new Exception("Invalid dark agon key requested");
+            }
+        }
+
+        internal bool DarkTorvusKeys(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_DARK_TORVUS_KEY_1_OBTAINED) > 0;
+                case 1:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_DARK_TORVUS_KEY_2_OBTAINED) > 0;
+                case 2:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_DARK_TORVUS_KEY_3_OBTAINED) > 0;
+                default:
+                    throw new Exception("Invalid dark torvus key requested");
+            }
+        }
+
+        internal bool IngHiveKeys(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_ING_HIVE_KEY_1_OBTAINED) > 0;
+                case 1:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_ING_HIVE_KEY_2_OBTAINED) > 0;
+                case 2:
+                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + this.InventoryOffset + OFF_ING_HIVE_KEY_3_OBTAINED) > 0;
+                default:
+                    throw new Exception("Invalid ing hive key requested");
+            }
+        }
         #endregion
 
         public Form1()
@@ -813,17 +916,28 @@ namespace MP2RandoAssist
                 this.label16.Text = "Spider Ball : " + (HaveSpiderBall ? OBTAINED : UNOBTAINED);
                 this.label17.Text = "Boost Ball : " + (HaveBoostBall ? OBTAINED : UNOBTAINED);
                 this.label18.Text = "Power Bombs : " + (MaxPowerBombs > 0 ? OBTAINED : UNOBTAINED);
-                this.label19.Text = "Seeker Missile : " + (HaveSeekerMissile ? OBTAINED : UNOBTAINED);
+                this.label19.Text = "Seeker Launcher : " + (HaveSeekerMissile ? OBTAINED : UNOBTAINED);
                 this.label20.Text = "Dark Suit : " + (HaveDarkSuit ? OBTAINED : UNOBTAINED);
                 this.label21.Text = "Light Suit : " + (HaveLightSuit ? OBTAINED : UNOBTAINED);
                 this.label22.Text = "Darkburst : " + (HaveDarkBurst ? OBTAINED : UNOBTAINED);
                 this.label23.Text = "Sunburst : " + (HaveSunBurst ? OBTAINED : UNOBTAINED);
                 this.label24.Text = "Sonic Boom : " + (HaveSonicBoom ? OBTAINED : UNOBTAINED);
-                this.label25.Text = "Space Boots : " + (HaveSpaceBoots ? OBTAINED : UNOBTAINED);
+                this.label25.Text = "Space Jump Boots : " + (HaveSpaceBoots ? OBTAINED : UNOBTAINED);
                 this.label28.Text = "Amber : " + (HaveAmberTranslator ? OBTAINED : UNOBTAINED);
                 this.label29.Text = "Cobalt : " + (HaveCobaltTranslator ? OBTAINED : UNOBTAINED);
                 this.label30.Text = "Emerald : " + (HaveEmeraldTranslator ? OBTAINED : UNOBTAINED);
-				/*this.label26.Text = "Room ID : 0x" + String.Format("{0:X}", CurrentRoom);
+                this.label31.Text = "Energy Transfer Mod : " + (HaveEnergyTransferModule ? OBTAINED : UNOBTAINED);
+                for (int i = 0; i < 9; i++)
+                {
+                    this.listView1.Items[0].SubItems[i + 1].Text = SkyTempleKeys(i) ? OBTAINED : UNOBTAINED;
+                    if (i < 3)
+                    {
+                        this.listView1.Items[1].SubItems[i + 1].Text = DarkAgonKeys(i) ? OBTAINED : UNOBTAINED;
+                        this.listView1.Items[2].SubItems[i + 1].Text = DarkTorvusKeys(i) ? OBTAINED : UNOBTAINED;
+                        this.listView1.Items[3].SubItems[i + 1].Text = IngHiveKeys(i) ? OBTAINED : UNOBTAINED;
+                    }
+                }
+                /*this.label26.Text = "Room ID : 0x" + String.Format("{0:X}", CurrentRoom);
 				this.label27.Text = "World ID : 0x" + String.Format("{0:X}", CurrentWorld);*/
             } catch
             {
@@ -926,6 +1040,7 @@ namespace MP2RandoAssist
                 this.groupBox1.ForeColor = Color.Gray;
                 this.groupBox2.ForeColor = Color.Gray;
                 this.groupBox3.ForeColor = Color.Gray;
+                this.groupBox4.ForeColor = Color.Gray;
                 this.comboBox1.BackColor = Color.Black;
                 this.comboBox1.ForeColor = Color.Gray;
                 this.comboBox3.BackColor = Color.Black;
@@ -935,6 +1050,8 @@ namespace MP2RandoAssist
                 this.comboBox5.BackColor = Color.Black;
                 this.comboBox5.ForeColor = Color.Gray;
                 this.button1.BackColor = Color.Black;
+                this.listView1.BackColor = Color.Black;
+                this.listView1.ForeColor = Color.Gray;
             }
             else
             {
@@ -943,6 +1060,7 @@ namespace MP2RandoAssist
                 this.groupBox1.ForeColor = Color.Black;
                 this.groupBox2.ForeColor = Color.Black;
                 this.groupBox3.ForeColor = Color.Black;
+                this.groupBox4.ForeColor = Color.Black;
                 this.comboBox1.BackColor = Color.LightGoldenrodYellow;
                 this.comboBox1.ForeColor = Color.Black;
                 this.comboBox3.BackColor = Color.LightGoldenrodYellow;
@@ -952,6 +1070,8 @@ namespace MP2RandoAssist
                 this.comboBox5.BackColor = Color.LightGoldenrodYellow;
                 this.comboBox5.ForeColor = Color.Black;
                 this.button1.BackColor = Color.LightGoldenrodYellow;
+                this.listView1.BackColor = Color.LightGoldenrodYellow;
+                this.listView1.ForeColor = Color.Black;
             }
             if (!IsLoadingSettings)
                 SaveSettings();
