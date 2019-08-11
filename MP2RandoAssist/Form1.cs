@@ -52,7 +52,7 @@ namespace MP2RandoAssist
         //internal const long OFF_MORPHBALLBOMBS_COUNT = 0x457D1B;
         internal const long OFF_SAVEMEM_PTR = 0x3B1630;
         internal const long OFF_SAVEMEM_PTR_OFFSET = 0x9ECA;
-        internal const long OFF_GAME_STATUS = 0x40C15C;
+        internal const long OFF_GAME_STATUS = 0x40C520;
         internal const long OFF_MAX_HEALTH_PER_SEGMENT = 0x14;
         internal const long OFF_HEALTH = OFF_MAX_HEALTH_PER_SEGMENT + 4;
         internal const long OFF_CRITICAL_HEALTH = OFF_HEALTH+4;
