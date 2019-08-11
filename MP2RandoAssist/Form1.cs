@@ -834,6 +834,10 @@ namespace MP2RandoAssist
                 this.comboBox4.Update();
                 this.comboBox5.SelectedIndex = 0;
                 this.comboBox5.Update();
+                this.dataGridView1.Rows.Add(new object[] { "Sky Temple", "?", "?", "?", "?", "?", "?", "?", "?", "?" });
+                this.dataGridView1.Rows.Add(new object[] { "Dark Agon", "?", "?", "?", "", "", "", "", "", "" });
+                this.dataGridView1.Rows.Add(new object[] { "Dark Torvus", "?", "?", "?", "", "", "", "", "", "" });
+                this.dataGridView1.Rows.Add(new object[] { "Ing Hive", "?", "?", "?", "", "", "", "", "", "" });
                 this.timer1.Enabled = true;
             } catch(Exception ex)
             {
@@ -927,16 +931,19 @@ namespace MP2RandoAssist
                 this.label29.Text = "Cobalt : " + (HaveCobaltTranslator ? OBTAINED : UNOBTAINED);
                 this.label30.Text = "Emerald : " + (HaveEmeraldTranslator ? OBTAINED : UNOBTAINED);
                 this.label31.Text = "Energy Transfer Mod : " + (HaveEnergyTransferModule ? OBTAINED : UNOBTAINED);
-                for (int i = 0; i < 9; i++)
+                new Thread(() =>
                 {
-                    this.listView1.Items[0].SubItems[i + 1].Text = SkyTempleKeys(i) ? OBTAINED : UNOBTAINED;
-                    if (i < 3)
+                    for (int i = 0; i < 9; i++)
                     {
-                        this.listView1.Items[1].SubItems[i + 1].Text = DarkAgonKeys(i) ? OBTAINED : UNOBTAINED;
-                        this.listView1.Items[2].SubItems[i + 1].Text = DarkTorvusKeys(i) ? OBTAINED : UNOBTAINED;
-                        this.listView1.Items[3].SubItems[i + 1].Text = IngHiveKeys(i) ? OBTAINED : UNOBTAINED;
+                        this.dataGridView1.Rows[0].Cells[i + 1].Value = SkyTempleKeys(i) ? OBTAINED : UNOBTAINED;
+                        if (i < 3)
+                        {
+                            this.dataGridView1.Rows[1].Cells[i + 1].Value = DarkAgonKeys(i) ? OBTAINED : UNOBTAINED;
+                            this.dataGridView1.Rows[2].Cells[i + 1].Value = DarkTorvusKeys(i) ? OBTAINED : UNOBTAINED;
+                            this.dataGridView1.Rows[3].Cells[i + 1].Value = IngHiveKeys(i) ? OBTAINED : UNOBTAINED;
+                        }
                     }
-                }
+                }).Start();
                 /*this.label26.Text = "Room ID : 0x" + String.Format("{0:X}", CurrentRoom);
 				this.label27.Text = "World ID : 0x" + String.Format("{0:X}", CurrentWorld);*/
             } catch
@@ -1050,8 +1057,11 @@ namespace MP2RandoAssist
                 this.comboBox5.BackColor = Color.Black;
                 this.comboBox5.ForeColor = Color.Gray;
                 this.button1.BackColor = Color.Black;
-                this.listView1.BackColor = Color.Black;
-                this.listView1.ForeColor = Color.Gray;
+                this.dataGridView1.BackColor = Color.Black;
+                this.dataGridView1.GridColor = Color.Gray;
+                this.dataGridView1.ForeColor = Color.Gray;
+                this.dataGridView1.DefaultCellStyle.BackColor = Color.Black;
+                this.dataGridView1.DefaultCellStyle.ForeColor = Color.Gray;
             }
             else
             {
@@ -1070,8 +1080,11 @@ namespace MP2RandoAssist
                 this.comboBox5.BackColor = Color.LightGoldenrodYellow;
                 this.comboBox5.ForeColor = Color.Black;
                 this.button1.BackColor = Color.LightGoldenrodYellow;
-                this.listView1.BackColor = Color.LightGoldenrodYellow;
-                this.listView1.ForeColor = Color.Black;
+                this.dataGridView1.BackColor = Color.LightGoldenrodYellow;
+                this.dataGridView1.GridColor = Color.Black;
+                this.dataGridView1.ForeColor = Color.Black;
+                this.dataGridView1.DefaultCellStyle.BackColor = Color.LightGoldenrodYellow;
+                this.dataGridView1.DefaultCellStyle.ForeColor = Color.Black;
             }
             if (!IsLoadingSettings)
                 SaveSettings();
