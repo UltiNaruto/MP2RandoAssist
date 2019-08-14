@@ -58,7 +58,7 @@ namespace MP2RandoAssist
         internal const long OFF_DARKBURST_OBTAINED = 0x9F;
         internal const long OFF_SUNBURST_OBTAINED = 0xAB;
         internal const long OFF_SONICBOOM_OBTAINED = 0xB7;
-        internal const long OFF_DARKVISOR_OBTAINED = 0xDC;
+        internal const long OFF_DARKVISOR_OBTAINED = 0xDB;
         internal const long OFF_ECHOVISOR_OBTAINED = 0xE7;
         internal const long OFF_DARKSUIT_OBTAINED = 0xFF;
         internal const long OFF_LIGHTSUIT_OBTAINED = 0x10B;
