@@ -69,8 +69,8 @@ namespace MP2RandoAssist
         internal const long OFF_GRAPPLEBEAM_OBTAINED = 0x177;
         internal const long OFF_SPACEBOOTS_OBTAINED = 0x183;
         internal const long OFF_GRAVITYBOOST_OBTAINED = 0x18B;
-        internal const long OFF_SCREWATTACK_OBTAINED = 0x19B;
-        internal const long OFF_SEEKERMISSILE_OBTAINED = 0x1A7;
+        internal const long OFF_SEEKERMISSILE_OBTAINED = 0x19B;
+        internal const long OFF_SCREWATTACK_OBTAINED = 0x1A7;
         internal const long OFF_SKY_TEMPLE_KEY_1_OBTAINED = 0x1BF;
         internal const long OFF_SKY_TEMPLE_KEY_2_OBTAINED = OFF_SKY_TEMPLE_KEY_1_OBTAINED + 0x0C;
         internal const long OFF_SKY_TEMPLE_KEY_3_OBTAINED = OFF_SKY_TEMPLE_KEY_2_OBTAINED + 0x0C;
