@@ -36,10 +36,11 @@ namespace MP2RandoAssist
 
         #region Constants
 		internal const long GCBaseRamAddr = 0x80000000;
-        internal const long OFF_CSTATEMANAGER = 0x3DC900;
-        internal const long OFF_CWORLD = 0x850;
+        internal const long OFF_CSTATEMANAGER_PAL = 0x3DC900;
+        internal const long OFF_CSTATEMANAGER_NTSC = 0x3DB6E0;
+        internal const long OFF_CWORLD = 0x8D0;
         internal const long OFF_CINVENTORY = 0x150C;
-        internal const long OFF_ROOM_ID = 0x68;
+        internal const long OFF_ROOM_ID = 0x88;
         internal const long OFF_WORLD_ID = 0x6C;
         internal const String OBTAINED = "O";
         internal const String UNOBTAINED = "X";
@@ -1061,18 +1062,24 @@ namespace MP2RandoAssist
 		
 		private long GetWorldOffset()
         {
-            long GC_CWorld = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER + OFF_CWORLD);
-            if (GC_CWorld < GCBaseRamAddr)
-                return -1;
-            return GC_CWorld - GCBaseRamAddr;
+            long GC_CWorld = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_PAL + OFF_CWORLD);
+            if (GC_CWorld > GCBaseRamAddr)
+                return GC_CWorld - GCBaseRamAddr;
+            GC_CWorld = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_NTSC + OFF_CWORLD);
+            if (GC_CWorld > GCBaseRamAddr)
+                return GC_CWorld - GCBaseRamAddr;
+            return -1;
         }
 
         private long GetInventoryOffset()
         {
-            long GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER + OFF_CINVENTORY);
-            if (GC_CInventory < GCBaseRamAddr)
-                return -1;
-            return GC_CInventory - GCBaseRamAddr;
+            long GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_PAL + OFF_CINVENTORY);
+            if (GC_CInventory > GCBaseRamAddr)
+                return GC_CInventory - GCBaseRamAddr;
+            GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_NTSC + OFF_CINVENTORY);
+            if (GC_CInventory > GCBaseRamAddr)
+                return GC_CInventory - GCBaseRamAddr;
+            return -1;
         }
 
         private void timer1_Tick(object sender, EventArgs e)
