@@ -34,14 +34,18 @@ namespace MP2RandoAssist
 
         internal static Byte[] Read(Process proc, long address, int size)
         {
-            if (proc.HasExited)
+            try {
+                if (size == 0)
+                    return new byte[0];
+                if (size < 0)
+                    return null;
+                byte[] datas = new byte[size];
+                IntPtr readBytesCount = IntPtr.Zero;
+                ReadProcessMemory(proc.Handle, new IntPtr(address), datas, size, out readBytesCount);
+                return datas;
+            } catch {
                 return null;
-            if (size == 0)
-                return new byte[0];
-            byte[] datas = new byte[size];
-            IntPtr readBytesCount = IntPtr.Zero;
-            ReadProcessMemory(proc.Handle, new IntPtr(address), datas, size, out readBytesCount);
-            return datas;
+            }
         }
 
         internal static Byte ReadUInt8(Process proc, long address)
@@ -97,6 +101,20 @@ namespace MP2RandoAssist
         internal static Double ReadFloat64(Process proc, long address)
         {
             return BitConverter.ToDouble(Read(proc, address, 8).Reverse().ToArray(), 0);
+        }
+
+        internal static String ReadString(Process proc, long address)
+        {
+            String str = "";
+            char c = '\0';
+            int i = 0;
+            do
+            {
+                c = (char)ReadUInt8(proc, address + (i++));
+                if(c != 0)
+                    str += c;
+            } while (c != 0);
+            return str;
         }
 
         internal static void Write(Process proc, long address, Byte[] datas)

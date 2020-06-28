@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,7 +8,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MP2RandoAssist
@@ -29,12 +27,13 @@ namespace MP2RandoAssist
         #region Auto Refill Timestamps
         internal long AutoRefill_Missiles_LastTime = 0;
         internal long AutoRefill_PowerBombs_LastTime = 0;
-        internal long AutoRefill_DarkBeam_LastTime = 0;
-        internal long AutoRefill_LightBeam_LastTime = 0;
         internal long Regenerate_Health_LastTime = 0;
         #endregion
 
         #region Constants
+        // File address to exe address + 0x31FE
+		internal const long OFF_CGAMESTATE_PAL = 0x3C6D88;
+        internal const long OFF_CGAMESTATE_NTSC = 0x3C5B68;
 		internal const long GCBaseRamAddr = 0x80000000;
         internal const long OFF_CSTATEMANAGER_PAL = 0x3DC900;
         internal const long OFF_CSTATEMANAGER_NTSC = 0x3DB6E0;
@@ -42,6 +41,20 @@ namespace MP2RandoAssist
         internal const long OFF_CINVENTORY = 0x150C;
         internal const long OFF_ROOM_ID = 0x88;
         internal const long OFF_WORLD_ID = 0x6C;
+        internal const long OFF_ETANK_HEALTH_CAPACITY_NTSC = 0x41abe0;
+        internal const long OFF_BASE_HEALTH_CAPACITY_NTSC = 0x41abe4;
+        internal const long OFF_ETANK_HEALTH_CAPACITY_PAL = 0x41bed8;
+        internal const long OFF_BASE_HEALTH_CAPACITY_PAL = 0x41bedc;
+        internal const long OFF_UNCHARGED_AMMO_COST_NTSC = 0x3aa8c8;
+        internal const long OFF_CHARGED_AMMO_COST_NTSC = 0x3aa8d8;
+        internal const long OFF_CHARGE_COMBO_COST_NTSC = 0x3aa8e8;
+        internal const long OFF_CHARGE_COMBO_MISSILE_COST_NTSC = 0x3a74ac;
+        internal const long OFF_BEAM_TYPE_COST_NTSC = 0x1cccb0;
+        internal const long OFF_UNCHARGED_AMMO_COST_PAL = 0x3abc28;
+        internal const long OFF_CHARGED_AMMO_COST_PAL = 0x3abc38;
+        internal const long OFF_CHARGE_COMBO_COST_PAL = 0x3abc48;
+        internal const long OFF_CHARGE_COMBO_MISSILE_COST_PAL = 0x3a7c04;
+        internal const long OFF_BEAM_TYPE_COST_PAL = 0x1ccfe4;
         internal const String OBTAINED = "O";
         internal const String UNOBTAINED = "X";
         internal const long AUTOREFILL_DELAY_IN_SEC = 2;
@@ -50,7 +63,8 @@ namespace MP2RandoAssist
         internal const long REGEN_HEALTH_COOLDOWN_IN_SEC = REGEN_HEALTH_COOLDOWN_IN_MIN * 60;
         internal const long REGEN_HEALTH_COOLDOWN = REGEN_HEALTH_COOLDOWN_IN_SEC * 1000;
 
-        //internal const long OFF_MORPHBALLBOMBS_COUNT = 0x457D1B;
+        internal const long OFF_MORPHBALLBOMBS_COUNT_PAL = 0xB9006B;
+        internal const long OFF_MORPHBALLBOMBS_COUNT_NTSC = 0xB3D52B;
         internal const long OFF_HEALTH = 0x14;
         internal const long OFF_DARKBEAM_OBTAINED = 0x6F;
         internal const long OFF_LIGHTBEAM_OBTAINED = 0x7B;
@@ -59,14 +73,17 @@ namespace MP2RandoAssist
         internal const long OFF_DARKBURST_OBTAINED = 0x9F;
         internal const long OFF_SUNBURST_OBTAINED = 0xAB;
         internal const long OFF_SONICBOOM_OBTAINED = 0xB7;
+        internal const long OFF_SCANVISOR_OBTAINED = 0xCF;
         internal const long OFF_DARKVISOR_OBTAINED = 0xDB;
         internal const long OFF_ECHOVISOR_OBTAINED = 0xE7;
+        internal const long OFF_VARIASUIT_OBTAINED = 0xEF;
         internal const long OFF_DARKSUIT_OBTAINED = 0xFF;
         internal const long OFF_LIGHTSUIT_OBTAINED = 0x10B;
+        internal const long OFF_MORPHBALL_OBTAINED = 0x117;
         internal const long OFF_BOOSTBALL_OBTAINED = 0x11F;
         internal const long OFF_SPIDERBALL_OBTAINED = 0x12F;
         internal const long OFF_MORPHBALLBOMBS_OBTAINED = 0x137;
-        internal const long OFF_CHARGEBEAM_OBTAINED = 0x16B; // useless but still here for reference
+        internal const long OFF_CHARGEBEAM_OBTAINED = 0x16B;
         internal const long OFF_GRAPPLEBEAM_OBTAINED = 0x177;
         internal const long OFF_SPACEBOOTS_OBTAINED = 0x183;
         internal const long OFF_GRAVITYBOOST_OBTAINED = 0x18B;
@@ -163,6 +180,15 @@ namespace MP2RandoAssist
         #endregion
 
         #region Metroid Prime 2 Echoes
+        internal bool IsPAL
+        {
+            get
+            {
+                if (MemoryUtils.ReadString(this.dolphin, this.RAMBaseAddr + 0x3ad710) == "!#$MetroidBuildInfo!#$Build v1.035 10/27/2004 19:48:17")
+                    return true;
+                return false;
+            }
+        }
 		internal uint CurrentWorld
         {
             get
@@ -258,7 +284,37 @@ namespace MP2RandoAssist
                 long InventoryOffset = GetInventoryOffset();
                 if (InventoryOffset == -1)
                     return 0;
-                return (ushort)(MemoryUtils.ReadUInt32(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_MAX_ENERGYTANKS)*100 + 99);
+                ushort ETankCount = (ushort)MemoryUtils.ReadUInt32(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_MAX_ENERGYTANKS);
+                ushort ETankHealthPerUnit = (ushort)MemoryUtils.ReadFloat32(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_ETANK_HEALTH_CAPACITY_PAL : OFF_ETANK_HEALTH_CAPACITY_NTSC));
+                ushort BaseHealth = (ushort)MemoryUtils.ReadFloat32(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_BASE_HEALTH_CAPACITY_PAL : OFF_BASE_HEALTH_CAPACITY_NTSC));
+                return (ushort)(ETankCount * ETankHealthPerUnit + BaseHealth);
+            }
+        }
+
+        internal int MorphBallBombs
+        {
+            get
+            {
+                long InventoryOffset = GetInventoryOffset();
+                if (InventoryOffset == -1)
+                    return 0;
+                return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_MORPHBALLBOMBS_COUNT_PAL : OFF_MORPHBALLBOMBS_COUNT_NTSC));
+            }
+
+            set
+            {
+                long InventoryOffset = GetInventoryOffset();
+                if (InventoryOffset == -1)
+                    return;
+                MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_MORPHBALLBOMBS_COUNT_PAL : OFF_MORPHBALLBOMBS_COUNT_NTSC), (byte)value);
+            }
+        }
+
+        internal int MaxMorphBallBombs
+        {
+            get
+            {
+                return 3;
             }
         }
 
@@ -388,6 +444,24 @@ namespace MP2RandoAssist
             }
         }
 
+        internal bool HaveScanVisor
+        {
+            get
+            {
+                long InventoryOffset = GetInventoryOffset();
+                if (InventoryOffset == -1)
+                    return false;
+                return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SCANVISOR_OBTAINED) > 0;
+            }
+            set
+            {
+                long InventoryOffset = GetInventoryOffset();
+                if (InventoryOffset == -1)
+                    return;
+                MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SCANVISOR_OBTAINED, (byte)(value ? 1 : 0));
+            }
+        }
+
         internal bool HaveDarkVisor
         {
             get
@@ -493,6 +567,24 @@ namespace MP2RandoAssist
                 if (InventoryOffset == -1)
                     return;
                 MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SPIDERBALL_OBTAINED, (byte)(value ? 1 : 0));
+            }
+        }
+
+        internal bool HaveMorphBall
+        {
+            get
+            {
+                long InventoryOffset = GetInventoryOffset();
+                if (InventoryOffset == -1)
+                    return false;
+                return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_MORPHBALL_OBTAINED) > 0;
+            }
+            set
+            {
+                long InventoryOffset = GetInventoryOffset();
+                if (InventoryOffset == -1)
+                    return;
+                MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_MORPHBALL_OBTAINED, (byte)(value ? 1 : 0));
             }
         }
 
@@ -856,87 +948,79 @@ namespace MP2RandoAssist
             }
         }
 
-        internal bool SkyTempleKeys(int index)
+        internal bool[] SkyTempleKeys()
         {
+            List<bool> keys = new bool[] { false, false, false, false, false, false, false, false, false }.ToList();
             long InventoryOffset = GetInventoryOffset();
             if (InventoryOffset == -1)
-                return false;
-            switch (index)
-            {
-                case 0:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_1_OBTAINED) > 0;
-                case 1:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_2_OBTAINED) > 0;
-                case 2:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_3_OBTAINED) > 0;
-                case 3:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_4_OBTAINED) > 0;
-                case 4:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_5_OBTAINED) > 0;
-                case 5:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_6_OBTAINED) > 0;
-                case 6:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_7_OBTAINED) > 0;
-                case 7:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_8_OBTAINED) > 0;
-                case 8:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_9_OBTAINED) > 0;
-                default:
-                    throw new Exception("Invalid sky temple key requested");
-            }
+                return keys.ToArray();
+            keys[0] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_1_OBTAINED) > 0;
+            keys[1] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_2_OBTAINED) > 0;
+            keys[2] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_3_OBTAINED) > 0;
+            keys[3] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_4_OBTAINED) > 0;
+            keys[4] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_5_OBTAINED) > 0;
+            keys[5] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_6_OBTAINED) > 0;
+            keys[6] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_7_OBTAINED) > 0;
+            keys[7] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_8_OBTAINED) > 0;
+            keys[8] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_SKY_TEMPLE_KEY_9_OBTAINED) > 0;
+            return keys.ToArray();
         }
 
-        internal bool DarkAgonKeys(int index)
+        internal bool[] DarkAgonKeys()
         {
+            List<bool> keys = new bool[] { false, false, false, false, false, false, false, false, false }.ToList();
             long InventoryOffset = GetInventoryOffset();
             if (InventoryOffset == -1)
-                return false;
-            switch (index)
-            {
-                case 0:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_AGON_KEY_1_OBTAINED) > 0;
-                case 1:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_AGON_KEY_2_OBTAINED) > 0;
-                case 2:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_AGON_KEY_3_OBTAINED) > 0;
-                default:
-                    throw new Exception("Invalid dark agon key requested");
-            }
+                return keys.ToArray();
+            keys[0] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_AGON_KEY_1_OBTAINED) > 0;
+            keys[1] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_AGON_KEY_2_OBTAINED) > 0;
+            keys[2] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_AGON_KEY_3_OBTAINED) > 0;
+            return keys.ToArray();
         }
 
-        internal bool DarkTorvusKeys(int index)
+        internal bool[] DarkTorvusKeys()
         {
+            List<bool> keys = new bool[] { false, false, false, false, false, false, false, false, false }.ToList();
             long InventoryOffset = GetInventoryOffset();
             if (InventoryOffset == -1)
-                return false;
-            switch (index)
-            {
-                case 0:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_TORVUS_KEY_1_OBTAINED) > 0;
-                case 1:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_TORVUS_KEY_2_OBTAINED) > 0;
-                case 2:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_TORVUS_KEY_3_OBTAINED) > 0;
-                default:
-                    throw new Exception("Invalid dark torvus key requested");
-            }
+                return keys.ToArray();
+            keys[0] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_TORVUS_KEY_1_OBTAINED) > 0;
+            keys[1] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_TORVUS_KEY_2_OBTAINED) > 0;
+            keys[2] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_DARK_TORVUS_KEY_3_OBTAINED) > 0;
+            return keys.ToArray();
         }
 
-        internal bool IngHiveKeys(int index)
+        internal bool[] IngHiveKeys()
         {
+            List<bool> keys = new bool[] { false, false, false, false, false, false, false, false, false }.ToList();
             long InventoryOffset = GetInventoryOffset();
             if (InventoryOffset == -1)
-                return false;
-            switch (index)
+                return keys.ToArray();
+            keys[0] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_ING_HIVE_KEY_1_OBTAINED) > 0;
+            keys[1] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_ING_HIVE_KEY_2_OBTAINED) > 0;
+            keys[2] = MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_ING_HIVE_KEY_3_OBTAINED) > 0;
+            return keys.ToArray();
+        }
+
+        internal bool AmmoSystem
+        {
+            set
             {
-                case 0:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_ING_HIVE_KEY_1_OBTAINED) > 0;
-                case 1:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_ING_HIVE_KEY_2_OBTAINED) > 0;
-                case 2:
-                    return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + InventoryOffset + OFF_ING_HIVE_KEY_3_OBTAINED) > 0;
-                default:
-                    throw new Exception("Invalid ing hive key requested");
+                long OFF_UNCHARGED_AMMO_COST = IsPAL ? OFF_UNCHARGED_AMMO_COST_PAL : OFF_UNCHARGED_AMMO_COST_NTSC;
+                long OFF_CHARGED_AMMO_COST = IsPAL ? OFF_CHARGED_AMMO_COST_PAL : OFF_CHARGED_AMMO_COST_NTSC;
+                long OFF_CHARGE_COMBO_COST = IsPAL ? OFF_CHARGE_COMBO_COST_PAL : OFF_CHARGE_COMBO_COST_NTSC;
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST, 0); // Power Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 4, value ? 1 : 0); // Dark Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 8, value ? 1 : 0); // Light Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 12, value ? 1 : 0); // Annihilator Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST, 0); // Power Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 4, value ? 5 : 0); // Dark Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 8, value ? 5 : 0); // Light Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 12, value ? 5 : 0); // Annihilator Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST, 0); // Power Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 4, value ? 30 : 0); // Dark Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 8, value ? 30 : 0); // Light Beam
+                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 12, value ? 30 : 0); // Annihilator Beam
             }
         }
         #endregion
@@ -1040,18 +1124,6 @@ namespace MP2RandoAssist
                     this.Close();
                     return;
                 }
-                this.comboBox1.SelectedIndex = 0;
-                this.comboBox1.Update();
-                this.comboBox3.SelectedIndex = 0;
-                this.comboBox3.Update();
-                this.comboBox4.SelectedIndex = 0;
-                this.comboBox4.Update();
-                this.comboBox5.SelectedIndex = 0;
-                this.comboBox5.Update();
-                this.dataGridView1.Rows.Add(new object[] { "Sky Temple", "?", "?", "?", "?", "?", "?", "?", "?", "?" });
-                this.dataGridView1.Rows.Add(new object[] { "Dark Agon", "?", "?", "?", "", "", "", "", "", "" });
-                this.dataGridView1.Rows.Add(new object[] { "Dark Torvus", "?", "?", "?", "", "", "", "", "", "" });
-                this.dataGridView1.Rows.Add(new object[] { "Ing Hive", "?", "?", "?", "", "", "", "", "", "" });
                 this.timer1.Enabled = true;
             } catch(Exception ex)
             {
@@ -1060,12 +1132,17 @@ namespace MP2RandoAssist
             }
         }
 		
+		private long GetGameStateOffset()
+        {
+            long GC_CGameState = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CGAMESTATE_PAL : OFF_CGAMESTATE_NTSC) + 0x134);
+            if (GC_CGameState > GCBaseRamAddr)
+                return GC_CGameState - GCBaseRamAddr;
+            return -1;
+        }
+		
 		private long GetWorldOffset()
         {
-            long GC_CWorld = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_PAL + OFF_CWORLD);
-            if (GC_CWorld > GCBaseRamAddr)
-                return GC_CWorld - GCBaseRamAddr;
-            GC_CWorld = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_NTSC + OFF_CWORLD);
+            long GC_CWorld = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CSTATEMANAGER_PAL : OFF_CSTATEMANAGER_NTSC) + OFF_CWORLD);
             if (GC_CWorld > GCBaseRamAddr)
                 return GC_CWorld - GCBaseRamAddr;
             return -1;
@@ -1073,13 +1150,31 @@ namespace MP2RandoAssist
 
         private long GetInventoryOffset()
         {
-            long GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_PAL + OFF_CINVENTORY);
-            if (GC_CInventory > GCBaseRamAddr)
-                return GC_CInventory - GCBaseRamAddr;
-            GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CSTATEMANAGER_NTSC + OFF_CINVENTORY);
+            long GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CSTATEMANAGER_PAL : OFF_CSTATEMANAGER_NTSC) + OFF_CINVENTORY);
             if (GC_CInventory > GCBaseRamAddr)
                 return GC_CInventory - GCBaseRamAddr;
             return -1;
+        }
+		
+		internal long IGT
+        {
+            get
+            {
+                long CGameState = GetGameStateOffset();
+                if (CGameState == -1)
+                    return -1;
+                return (long)(MemoryUtils.ReadFloat64(this.dolphin, this.RAMBaseAddr + CGameState + 0x48) * 1000);
+            }
+        }
+
+        internal string IGTAsStr
+        {
+            get
+            {
+                if (IGT == -1)
+                    return "00:00:00.000";
+                return String.Format("{0:00}:{1:00}:{2:00}.{3:000}", IGT / (60 * 60 * 1000), (IGT / (60 * 1000)) % 60, (IGT / 1000) % 60, IGT % 1000);
+            }
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -1104,25 +1199,9 @@ namespace MP2RandoAssist
                 if (Health < 30)
                     this.label4.Text += " /!\\";
                 this.label1.Text = "Missiles : " + Missiles + " / " + MaxMissiles;
-                if (comboBox1.SelectedIndex == 1)
-                    AutoRefillMissiles();
-                else if (comboBox1.SelectedIndex == 2)
-                    Missiles = MaxMissiles;
                 this.label3.Text = "Power Bombs : " + PowerBombs + " / " + MaxPowerBombs;
-                if (comboBox3.SelectedIndex == 1)
-                    AutoRefillPowerBombs();
-                else if (comboBox3.SelectedIndex == 2)
-                    PowerBombs = MaxPowerBombs;
                 this.label26.Text = "Dark Beam : "+DarkBeamAmmo+" / "+MaxDarkBeamAmmo;
-                if (comboBox4.SelectedIndex == 1)
-                    AutoRefillDarkBeamAmmo();
-                else if (comboBox4.SelectedIndex == 2)
-                    DarkBeamAmmo = MaxDarkBeamAmmo;
                 this.label27.Text = "Light Beam : " + LightBeamAmmo + " / " + MaxLightBeamAmmo;
-                if (comboBox5.SelectedIndex == 1)
-                    AutoRefillLightBeamAmmo();
-                else if (comboBox5.SelectedIndex == 2)
-                    LightBeamAmmo = MaxLightBeamAmmo;
                 this.label2.Text = "Screw Attack : " + (HaveScrewAttack ? OBTAINED : UNOBTAINED);
                 this.label5.Text = "Violet : " + (HaveVioletTranslator ? OBTAINED : UNOBTAINED);
                 this.label6.Text = "Echo Visor : " + (HaveEchoVisor ? OBTAINED : UNOBTAINED);
@@ -1149,21 +1228,28 @@ namespace MP2RandoAssist
                 this.label29.Text = "Cobalt : " + (HaveCobaltTranslator ? OBTAINED : UNOBTAINED);
                 this.label30.Text = "Emerald : " + (HaveEmeraldTranslator ? OBTAINED : UNOBTAINED);
                 this.label31.Text = "Energy Transfer Mod : " + (HaveEnergyTransferModule ? OBTAINED : UNOBTAINED);
-                new Thread(() =>
-                {
-                    for (int i = 0; i < 9; i++)
-                    {
-                        this.dataGridView1.Rows[0].Cells[i + 1].Value = SkyTempleKeys(i) ? OBTAINED : UNOBTAINED;
-                        if (i < 3)
-                        {
-                            this.dataGridView1.Rows[1].Cells[i + 1].Value = DarkAgonKeys(i) ? OBTAINED : UNOBTAINED;
-                            this.dataGridView1.Rows[2].Cells[i + 1].Value = DarkTorvusKeys(i) ? OBTAINED : UNOBTAINED;
-                            this.dataGridView1.Rows[3].Cells[i + 1].Value = IngHiveKeys(i) ? OBTAINED : UNOBTAINED;
-                        }
-                    }
-                }).Start();
+                this.label32.Text = IGTAsStr;
+                this.label33.Text = "Sky Temple : " + SkyTempleKeys().Where(key => key == true).Count() + " / 9";
+                this.label34.Text = "Dark Agon : " + DarkAgonKeys().Where(key => key == true).Count() + " / 3";
+                this.label35.Text = "Dark Torvus : " + DarkTorvusKeys().Where(key => key == true).Count() + " / 3";
+                this.label36.Text = "Ing Hive : " + IngHiveKeys().Where(key => key == true).Count() + " / 3";
+                this.label37.Text = "Morph Ball : " + (HaveMorphBall ? OBTAINED : UNOBTAINED);
+                this.label38.Text = "Scan Visor : " + (HaveScanVisor ? OBTAINED : UNOBTAINED);
+                this.label39.Text = "Charge Beam : " + (HaveChargeBeam ? OBTAINED : UNOBTAINED);
                 /*this.label26.Text = "Room ID : 0x" + String.Format("{0:X}", CurrentRoom);
 				this.label27.Text = "World ID : 0x" + String.Format("{0:X}", CurrentWorld);*/
+
+                // Easy Mode
+                if (checkBox3.Checked)
+                {
+                    AutoRefillMissiles();
+                    AutoRefillPowerBombs();
+                }
+                // Morph Ball Bombs Insta Refill
+                if(checkBox4.Checked)
+                {
+                    MorphBallBombs = MaxMorphBallBombs;
+                }
             } catch
             {
                 if (!this.Exiting)
@@ -1205,36 +1291,6 @@ namespace MP2RandoAssist
             AutoRefill_PowerBombs_LastTime = curTime;
         }
 
-        private void AutoRefillDarkBeamAmmo()
-        {
-            long curTime = GetCurTimeInMilliseconds();
-            if (DarkBeamAmmo == MaxDarkBeamAmmo)
-                AutoRefill_DarkBeam_LastTime = curTime + AUTOREFILL_DELAY;
-            if (MaxDarkBeamAmmo == 0)
-                return;
-            if (DarkBeamAmmo + 1 > MaxDarkBeamAmmo)
-                return;
-            if (curTime - AutoRefill_DarkBeam_LastTime <= AUTOREFILL_DELAY)
-                return;
-            DarkBeamAmmo++;
-            AutoRefill_DarkBeam_LastTime = curTime;
-        }
-
-        private void AutoRefillLightBeamAmmo()
-        {
-            long curTime = GetCurTimeInMilliseconds();
-            if (LightBeamAmmo == MaxLightBeamAmmo)
-                AutoRefill_LightBeam_LastTime = curTime + AUTOREFILL_DELAY;
-            if (MaxLightBeamAmmo == 0)
-                return;
-            if (LightBeamAmmo + 1 > MaxLightBeamAmmo)
-                return;
-            if (curTime - AutoRefill_LightBeam_LastTime <= AUTOREFILL_DELAY)
-                return;
-            LightBeamAmmo++;
-            AutoRefill_LightBeam_LastTime = curTime;
-        }
-
         private void button1_Click(object sender, EventArgs e)
         {
             long curTime = GetCurTimeInMilliseconds();
@@ -1266,20 +1322,8 @@ namespace MP2RandoAssist
                 this.groupBox2.ForeColor = Color.Gray;
                 this.groupBox3.ForeColor = Color.Gray;
                 this.groupBox4.ForeColor = Color.Gray;
-                this.comboBox1.BackColor = Color.Black;
-                this.comboBox1.ForeColor = Color.Gray;
-                this.comboBox3.BackColor = Color.Black;
-                this.comboBox3.ForeColor = Color.Gray;
-                this.comboBox4.BackColor = Color.Black;
-                this.comboBox4.ForeColor = Color.Gray;
-                this.comboBox5.BackColor = Color.Black;
-                this.comboBox5.ForeColor = Color.Gray;
+                this.groupBox5.ForeColor = Color.Gray;
                 this.button1.BackColor = Color.Black;
-                this.dataGridView1.BackColor = Color.Black;
-                this.dataGridView1.GridColor = Color.Gray;
-                this.dataGridView1.ForeColor = Color.Gray;
-                this.dataGridView1.DefaultCellStyle.BackColor = Color.Black;
-                this.dataGridView1.DefaultCellStyle.ForeColor = Color.Gray;
             }
             else
             {
@@ -1289,23 +1333,16 @@ namespace MP2RandoAssist
                 this.groupBox2.ForeColor = Color.Black;
                 this.groupBox3.ForeColor = Color.Black;
                 this.groupBox4.ForeColor = Color.Black;
-                this.comboBox1.BackColor = Color.LightGoldenrodYellow;
-                this.comboBox1.ForeColor = Color.Black;
-                this.comboBox3.BackColor = Color.LightGoldenrodYellow;
-                this.comboBox3.ForeColor = Color.Black;
-                this.comboBox4.BackColor = Color.LightGoldenrodYellow;
-                this.comboBox4.ForeColor = Color.Black;
-                this.comboBox5.BackColor = Color.LightGoldenrodYellow;
-                this.comboBox5.ForeColor = Color.Black;
+                this.groupBox5.ForeColor = Color.Gray;
                 this.button1.BackColor = Color.LightGoldenrodYellow;
-                this.dataGridView1.BackColor = Color.LightGoldenrodYellow;
-                this.dataGridView1.GridColor = Color.Black;
-                this.dataGridView1.ForeColor = Color.Black;
-                this.dataGridView1.DefaultCellStyle.BackColor = Color.LightGoldenrodYellow;
-                this.dataGridView1.DefaultCellStyle.ForeColor = Color.Black;
             }
             if (!IsLoadingSettings)
                 SaveSettings();
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            AmmoSystem = !checkBox2.Checked;
         }
     }
 }
