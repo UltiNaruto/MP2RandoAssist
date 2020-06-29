@@ -142,6 +142,11 @@ namespace MP2RandoAssist
             Write(proc, address, BitConverter.GetBytes(value));
         }
 
+        internal static void WriteUInt32BE(Process proc, long address, UInt32 value)
+        {
+            Write(proc, address, BitConverter.GetBytes(value).Reverse().ToArray());
+        }
+
         internal static void WriteUInt64(Process proc, long address, UInt64 value)
         {
             Write(proc, address, BitConverter.GetBytes(value));

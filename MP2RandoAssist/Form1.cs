@@ -27,7 +27,7 @@ namespace MP2RandoAssist
         #region Auto Refill Timestamps
         internal long AutoRefill_Missiles_LastTime = 0;
         internal long AutoRefill_PowerBombs_LastTime = 0;
-        internal long Regenerate_Health_LastTime = 0;
+        internal long AutoRefill_Health_LastTime = 0;
         #endregion
 
         #region Constants
@@ -35,10 +35,14 @@ namespace MP2RandoAssist
 		internal const long OFF_CGAMESTATE_PAL = 0x3C6D88;
         internal const long OFF_CGAMESTATE_NTSC = 0x3C5B68;
 		internal const long GCBaseRamAddr = 0x80000000;
+        internal const long OFF_CPLAYER_PAL = 0x3CB960;
+        internal const long OFF_CPLAYER_NTSC = 0x3CA740;
+        internal const long OFF_CPLAYERBOMB = 0xEBC;
+        internal const long OFF_CPLAYERBOMB_MBB_COUNT = 0x78B;
         internal const long OFF_CSTATEMANAGER_PAL = 0x3DC900;
         internal const long OFF_CSTATEMANAGER_NTSC = 0x3DB6E0;
         internal const long OFF_CWORLD = 0x8D0;
-        internal const long OFF_CINVENTORY = 0x150C;
+        internal const long OFF_CPLAYERSTATE = 0x150C;
         internal const long OFF_ROOM_ID = 0x88;
         internal const long OFF_WORLD_ID = 0x6C;
         internal const long OFF_ETANK_HEALTH_CAPACITY_NTSC = 0x41abe0;
@@ -55,16 +59,17 @@ namespace MP2RandoAssist
         internal const long OFF_CHARGE_COMBO_COST_PAL = 0x3abc48;
         internal const long OFF_CHARGE_COMBO_MISSILE_COST_PAL = 0x3a7c04;
         internal const long OFF_BEAM_TYPE_COST_PAL = 0x1ccfe4;
-        internal const String OBTAINED = "O";
-        internal const String UNOBTAINED = "X";
         internal const long AUTOREFILL_DELAY_IN_SEC = 2;
         internal const long AUTOREFILL_DELAY = AUTOREFILL_DELAY_IN_SEC * 1000;
-        internal const long REGEN_HEALTH_COOLDOWN_IN_MIN = 2;
-        internal const long REGEN_HEALTH_COOLDOWN_IN_SEC = REGEN_HEALTH_COOLDOWN_IN_MIN * 60;
-        internal const long REGEN_HEALTH_COOLDOWN = REGEN_HEALTH_COOLDOWN_IN_SEC * 1000;
 
+        internal const long OFF_GROUND_SIDEWAYS_SPEEDCAP_PAL = 0x736F8C;
+        internal const long OFF_MIDAIR_SIDEWAYS_SPEEDCAP_PAL = 0x736F90;
+        internal const long OFF_LOCK_SPEEDCAP_PAL = 0x3AB304;
+        internal const long OFF_GROUND_SIDEWAYS_SPEEDCAP_NTSC = 0x72E8CC;
+        internal const long OFF_MIDAIR_SIDEWAYS_SPEEDCAP_NTSC = 0x72E8D0;
+        internal const long OFF_LOCK_SPEEDCAP_NTSC = 0x3A9FB4;
         internal const long OFF_MORPHBALLBOMBS_COUNT_PAL = 0xB9006B;
-        internal const long OFF_MORPHBALLBOMBS_COUNT_NTSC = 0xB3D52B;
+        internal const long OFF_MORPHBALLBOMBS_COUNT_NTSC = 0xB3AE8B;
         internal const long OFF_HEALTH = 0x14;
         internal const long OFF_DARKBEAM_OBTAINED = 0x6F;
         internal const long OFF_LIGHTBEAM_OBTAINED = 0x7B;
@@ -295,18 +300,16 @@ namespace MP2RandoAssist
         {
             get
             {
-                long InventoryOffset = GetInventoryOffset();
-                if (InventoryOffset == -1)
+                if (CPlayerBomb == -1)
                     return 0;
-                return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_MORPHBALLBOMBS_COUNT_PAL : OFF_MORPHBALLBOMBS_COUNT_NTSC));
+                return MemoryUtils.ReadUInt8(this.dolphin, this.RAMBaseAddr + CPlayerBomb + OFF_CPLAYERBOMB_MBB_COUNT);
             }
 
             set
             {
-                long InventoryOffset = GetInventoryOffset();
-                if (InventoryOffset == -1)
+                if (CPlayerBomb == -1)
                     return;
-                MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_MORPHBALLBOMBS_COUNT_PAL : OFF_MORPHBALLBOMBS_COUNT_NTSC), (byte)value);
+                MemoryUtils.WriteUInt8(this.dolphin, this.RAMBaseAddr + CPlayerBomb + OFF_CPLAYERBOMB_MBB_COUNT, (byte)value);
             }
         }
 
@@ -642,7 +645,7 @@ namespace MP2RandoAssist
             }
         }
 
-        internal bool HaveSpaceBoots
+        internal bool HaveSpaceJumpBoots
         {
             get
             {
@@ -696,7 +699,7 @@ namespace MP2RandoAssist
             }
         }
 
-        internal bool HaveSeekerMissile
+        internal bool HaveSeekerLauncher
         {
             get
             {
@@ -1009,18 +1012,29 @@ namespace MP2RandoAssist
                 long OFF_UNCHARGED_AMMO_COST = IsPAL ? OFF_UNCHARGED_AMMO_COST_PAL : OFF_UNCHARGED_AMMO_COST_NTSC;
                 long OFF_CHARGED_AMMO_COST = IsPAL ? OFF_CHARGED_AMMO_COST_PAL : OFF_CHARGED_AMMO_COST_NTSC;
                 long OFF_CHARGE_COMBO_COST = IsPAL ? OFF_CHARGE_COMBO_COST_PAL : OFF_CHARGE_COMBO_COST_NTSC;
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST, 0); // Power Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 4, value ? 1 : 0); // Dark Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 8, value ? 1 : 0); // Light Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 12, value ? 1 : 0); // Annihilator Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST, 0); // Power Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 4, value ? 5 : 0); // Dark Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 8, value ? 5 : 0); // Light Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 12, value ? 5 : 0); // Annihilator Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST, 0); // Power Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 4, value ? 30 : 0); // Dark Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 8, value ? 30 : 0); // Light Beam
-                MemoryUtils.WriteInt32(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 12, value ? 30 : 0); // Annihilator Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST, 0); // Power Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 4, (uint)(value ? 1 : 0)); // Dark Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 8, (uint)(value ? 1 : 0)); // Light Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_UNCHARGED_AMMO_COST + 12, (uint)(value ? 1 : 0)); // Annihilator Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST, 0); // Power Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 4, (uint)(value ? 5 : 0)); // Dark Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 8, (uint)(value ? 5 : 0)); // Light Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGED_AMMO_COST + 12, (uint)(value ? 5 : 0)); // Annihilator Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST, 0); // Power Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 4, (uint)(value ? 30 : 0)); // Dark Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 8, (uint)(value ? 30 : 0)); // Light Beam
+                MemoryUtils.WriteUInt32BE(this.dolphin, this.RAMBaseAddr + OFF_CHARGE_COMBO_COST + 12, (uint)(value ? 30 : 0)); // Annihilator Beam
+            }
+        }
+
+        internal bool Prime1_Dash
+        {
+            set
+            {
+                long OFF_LOCK_SPEEDCAP = IsPAL ? OFF_LOCK_SPEEDCAP_PAL : OFF_LOCK_SPEEDCAP_NTSC;
+                long OFF_MIDAIR_SIDEWAYS_SPEEDCAP = IsPAL ? OFF_MIDAIR_SIDEWAYS_SPEEDCAP_PAL : OFF_MIDAIR_SIDEWAYS_SPEEDCAP_NTSC;
+                MemoryUtils.WriteFloat32(this.dolphin, this.RAMBaseAddr + OFF_LOCK_SPEEDCAP, value ? 40.0f : 18.0f);
+                MemoryUtils.WriteFloat32(this.dolphin, this.RAMBaseAddr + OFF_MIDAIR_SIDEWAYS_SPEEDCAP, value ? 40.0f : 16.5f);
             }
         }
         #endregion
@@ -1044,7 +1058,7 @@ namespace MP2RandoAssist
                         continue;
                     String[] setting = line.Split('=');
                     if (setting[0] == "DarkMode")
-                        this.checkBox1.Checked = setting[1] == "ON";
+                        this.chkBoxDarkMode.Checked = setting[1] == "ON";
                 }
                 IsLoadingSettings = false;
             }
@@ -1054,7 +1068,7 @@ namespace MP2RandoAssist
         {
             using (var file = new StreamWriter(File.OpenWrite("MP2RandoAssist.ini")))
             {
-                file.WriteLine("DarkMode=" + (this.checkBox1.Checked ? "ON" : "OFF"));
+                file.WriteLine("DarkMode=" + (this.chkBoxDarkMode.Checked ? "ON" : "OFF"));
             }
         }
 
@@ -1124,6 +1138,12 @@ namespace MP2RandoAssist
                     this.Close();
                     return;
                 }
+                this.FormClosing += (s, ev) =>
+                {
+                    AmmoSystem = true;
+                    Prime1_Dash = false;
+                    this.Exiting = true;
+                };
                 this.timer1.Enabled = true;
             } catch(Exception ex)
             {
@@ -1131,8 +1151,32 @@ namespace MP2RandoAssist
                 this.Close();
             }
         }
-		
-		private long GetGameStateOffset()
+
+        internal long CPlayer
+        {
+            get
+            {
+                long GC_CPlayer = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CPLAYER_PAL : OFF_CPLAYER_NTSC));
+                if (GC_CPlayer > GCBaseRamAddr)
+                    return GC_CPlayer - GCBaseRamAddr;
+                return -1;
+            }
+        }
+
+        internal long CPlayerBomb
+        {
+            get
+            {
+                if (CPlayer == -1)
+                    return -1;
+                long GC_CPlayerBomb = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + CPlayer + OFF_CPLAYERBOMB);
+                if (GC_CPlayerBomb > GCBaseRamAddr)
+                    return GC_CPlayerBomb - GCBaseRamAddr;
+                return -1;
+            }
+        }
+
+        private long GetGameStateOffset()
         {
             long GC_CGameState = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CGAMESTATE_PAL : OFF_CGAMESTATE_NTSC) + 0x134);
             if (GC_CGameState > GCBaseRamAddr)
@@ -1150,7 +1194,7 @@ namespace MP2RandoAssist
 
         private long GetInventoryOffset()
         {
-            long GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CSTATEMANAGER_PAL : OFF_CSTATEMANAGER_NTSC) + OFF_CINVENTORY);
+            long GC_CInventory = MemoryUtils.ReadUInt32BE(this.dolphin, this.RAMBaseAddr + (IsPAL ? OFF_CSTATEMANAGER_PAL : OFF_CSTATEMANAGER_NTSC) + OFF_CPLAYERSTATE);
             if (GC_CInventory > GCBaseRamAddr)
                 return GC_CInventory - GCBaseRamAddr;
             return -1;
@@ -1195,58 +1239,60 @@ namespace MP2RandoAssist
 				/*if (WasInSaveStation != IsInSaveStationRoom && IsInSaveStationRoom)
 					Health = MaxHealth;
 				WasInSaveStation = IsInSaveStationRoom;*/
-                this.label4.Text = "HP : " + Health + " / " + MaxHealth;
+                this.lblHealth.Text = "HP : " + Health + " / " + MaxHealth;
                 if (Health < 30)
-                    this.label4.Text += " /!\\";
-                this.label1.Text = "Missiles : " + Missiles + " / " + MaxMissiles;
-                this.label3.Text = "Power Bombs : " + PowerBombs + " / " + MaxPowerBombs;
-                this.label26.Text = "Dark Beam : "+DarkBeamAmmo+" / "+MaxDarkBeamAmmo;
-                this.label27.Text = "Light Beam : " + LightBeamAmmo + " / " + MaxLightBeamAmmo;
-                this.label2.Text = "Screw Attack : " + (HaveScrewAttack ? OBTAINED : UNOBTAINED);
-                this.label5.Text = "Violet : " + (HaveVioletTranslator ? OBTAINED : UNOBTAINED);
-                this.label6.Text = "Echo Visor : " + (HaveEchoVisor ? OBTAINED : UNOBTAINED);
-                this.label7.Text = "Dark Visor : " + (HaveDarkVisor ? OBTAINED : UNOBTAINED);
-                this.label8.Text = "Morph Ball Bombs : " + (HaveMorphBallBombs ? OBTAINED : UNOBTAINED);
-                this.label9.Text = "Missile Launcher : " + (MaxMissiles > 0 ? OBTAINED : UNOBTAINED);
-                this.label10.Text = "Super Missile : " + (HaveSuperMissile ? OBTAINED : UNOBTAINED);
-                this.label11.Text = "Annihilator Beam : " + (HaveAnnihilatorBeam ? OBTAINED : UNOBTAINED);
-                this.label12.Text = "Light Beam : " + (HaveLightBeam ? OBTAINED : UNOBTAINED);
-                this.label13.Text = "Dark Beam : " + (HaveDarkBeam ? OBTAINED : UNOBTAINED);
-                this.label14.Text = "Gravity Boost : " + (HaveGravityBoost ? OBTAINED : UNOBTAINED);
-                this.label15.Text = "Grapple Beam : " + (HaveGrappleBeam ? OBTAINED : UNOBTAINED);
-                this.label16.Text = "Spider Ball : " + (HaveSpiderBall ? OBTAINED : UNOBTAINED);
-                this.label17.Text = "Boost Ball : " + (HaveBoostBall ? OBTAINED : UNOBTAINED);
-                this.label18.Text = "Power Bombs : " + (MaxPowerBombs > 0 ? OBTAINED : UNOBTAINED);
-                this.label19.Text = "Seeker Launcher : " + (HaveSeekerMissile ? OBTAINED : UNOBTAINED);
-                this.label20.Text = "Dark Suit : " + (HaveDarkSuit ? OBTAINED : UNOBTAINED);
-                this.label21.Text = "Light Suit : " + (HaveLightSuit ? OBTAINED : UNOBTAINED);
-                this.label22.Text = "Darkburst : " + (HaveDarkBurst ? OBTAINED : UNOBTAINED);
-                this.label23.Text = "Sunburst : " + (HaveSunBurst ? OBTAINED : UNOBTAINED);
-                this.label24.Text = "Sonic Boom : " + (HaveSonicBoom ? OBTAINED : UNOBTAINED);
-                this.label25.Text = "Space Jump Boots : " + (HaveSpaceBoots ? OBTAINED : UNOBTAINED);
-                this.label28.Text = "Amber : " + (HaveAmberTranslator ? OBTAINED : UNOBTAINED);
-                this.label29.Text = "Cobalt : " + (HaveCobaltTranslator ? OBTAINED : UNOBTAINED);
-                this.label30.Text = "Emerald : " + (HaveEmeraldTranslator ? OBTAINED : UNOBTAINED);
-                this.label31.Text = "Energy Transfer Mod : " + (HaveEnergyTransferModule ? OBTAINED : UNOBTAINED);
-                this.label32.Text = IGTAsStr;
-                this.label33.Text = "Sky Temple : " + SkyTempleKeys().Where(key => key == true).Count() + " / 9";
-                this.label34.Text = "Dark Agon : " + DarkAgonKeys().Where(key => key == true).Count() + " / 3";
-                this.label35.Text = "Dark Torvus : " + DarkTorvusKeys().Where(key => key == true).Count() + " / 3";
-                this.label36.Text = "Ing Hive : " + IngHiveKeys().Where(key => key == true).Count() + " / 3";
-                this.label37.Text = "Morph Ball : " + (HaveMorphBall ? OBTAINED : UNOBTAINED);
-                this.label38.Text = "Scan Visor : " + (HaveScanVisor ? OBTAINED : UNOBTAINED);
-                this.label39.Text = "Charge Beam : " + (HaveChargeBeam ? OBTAINED : UNOBTAINED);
+                    this.lblHealth.Text += " /!\\";
+                this.lblMissilesAmmo.Text = "Missiles : " + Missiles + " / " + MaxMissiles;
+                this.lblMorphBallBombsAmmo.Text = "Morph Ball Bombs : " + MorphBallBombs + " / " + MaxMorphBallBombs;
+                this.lblPowerBombsAmmo.Text = "Power Bombs : " + PowerBombs + " / " + MaxPowerBombs;
+                this.lblDarkBeamAmmo.Text = "Dark Beam : "+DarkBeamAmmo+" / "+MaxDarkBeamAmmo;
+                this.lblLightBeamAmmo.Text = "Light Beam : " + LightBeamAmmo + " / " + MaxLightBeamAmmo;
+                this.chkBoxSpaceJumpBoots.Checked = HaveSpaceJumpBoots;
+                this.chkBoxGravityBoost.Checked = HaveGravityBoost;
+                this.chkBoxScrewAttack.Checked = HaveScrewAttack;
+                this.chkBoxScanVisor.Checked = HaveScanVisor;
+                this.chkBoxEchoVisor.Checked = HaveEchoVisor;
+                this.chkBoxDarkVisor.Checked = HaveDarkVisor;
+                this.chkBoxMorphBall.Checked = HaveMorphBall;
+                this.chkBoxMorphBallBombs.Checked = HaveMorphBallBombs;
+                this.chkBoxPowerBombs.Checked = MaxPowerBombs > 0;
+                this.chkBoxSpiderBall.Checked = HaveSpiderBall;
+                this.chkBoxBoostBall.Checked = HaveBoostBall;
+                this.chkBoxMissileLauncher.Checked = MaxMissiles > 0;
+                this.chkBoxSeekerLauncher.Checked = HaveSeekerLauncher;
+                this.chkBoxLightBeam.Checked = HaveLightBeam;
+                this.chkBoxDarkBeam.Checked = HaveDarkBeam;
+                this.chkBoxAnnihilatorBeam.Checked = HaveAnnihilatorBeam;
+                this.chkBoxChargeBeam.Checked = HaveChargeBeam;
+                this.chkBoxGrappleBeam.Checked = HaveGrappleBeam;
+                this.chkBoxDarkSuit.Checked = HaveDarkSuit;
+                this.chkBoxLightSuit.Checked = HaveLightSuit;
+                this.chkBoxSuperMissile.Checked = HaveSuperMissile;
+                this.chkBoxDarkBurst.Checked = HaveDarkBurst;
+                this.chkBoxSunBurst.Checked = HaveSunBurst;
+                this.chkBoxSonicBoom.Checked = HaveSonicBoom;
+                this.chkBoxVioletTranslator.Checked = HaveVioletTranslator;
+                this.chkBoxAmberTranslator.Checked = HaveAmberTranslator;
+                this.chkBoxCobaltTranslator.Checked = HaveCobaltTranslator;
+                this.chkBoxEmeraldTranslator.Checked = HaveEmeraldTranslator;
+                this.chkBoxEnergyTransferModule.Checked = HaveEnergyTransferModule;
+                this.lblIGT.Text = IGTAsStr;
+                this.lblSkyTempleKeys.Text = "Sky Temple : " + SkyTempleKeys().Where(key => key == true).Count() + " / 9";
+                this.lblDarkAgonKeys.Text = "Dark Agon : " + DarkAgonKeys().Where(key => key == true).Count() + " / 3";
+                this.lblDarkTorvusKeys.Text = "Dark Torvus : " + DarkTorvusKeys().Where(key => key == true).Count() + " / 3";
+                this.lblIngHiveKeys.Text = "Ing Hive : " + IngHiveKeys().Where(key => key == true).Count() + " / 3";
                 /*this.label26.Text = "Room ID : 0x" + String.Format("{0:X}", CurrentRoom);
 				this.label27.Text = "World ID : 0x" + String.Format("{0:X}", CurrentWorld);*/
 
                 // Easy Mode
-                if (checkBox3.Checked)
+                if (chkBoxEasyMode.Checked)
                 {
                     AutoRefillMissiles();
                     AutoRefillPowerBombs();
+                    AutoRefillHealth();
                 }
                 // Morph Ball Bombs Insta Refill
-                if(checkBox4.Checked)
+                if(chkBoxMBBInstaRefill.Checked)
                 {
                     MorphBallBombs = MaxMorphBallBombs;
                 }
@@ -1263,58 +1309,70 @@ namespace MP2RandoAssist
 
         private void AutoRefillMissiles()
         {
-            long curTime = GetCurTimeInMilliseconds();
-            if (Missiles == MaxMissiles)
-                AutoRefill_Missiles_LastTime = curTime + AUTOREFILL_DELAY;
             if (MaxMissiles == 0)
                 return;
-            if (Missiles + 1 > MaxMissiles)
+
+            long curTime = GetCurTimeInMilliseconds();
+            if (Missiles == MaxMissiles)
+            {
+                AutoRefill_Missiles_LastTime = curTime + AUTOREFILL_DELAY;
                 return;
+            }
             if (curTime - AutoRefill_Missiles_LastTime <= AUTOREFILL_DELAY)
                 return;
-            Missiles++;
-            AutoRefill_Missiles_LastTime = curTime;
+            if (Missiles + 1 <= MaxMissiles)
+            {
+                Missiles++;
+                AutoRefill_Missiles_LastTime = curTime;
+            }
         }
 
         private void AutoRefillPowerBombs()
         {
-            long curTime = GetCurTimeInMilliseconds();
-            if (PowerBombs == MaxPowerBombs)
-                AutoRefill_PowerBombs_LastTime = curTime + AUTOREFILL_DELAY;
             if (MaxPowerBombs == 0)
                 return;
-            if (PowerBombs + 1 > MaxPowerBombs)
+
+            long curTime = GetCurTimeInMilliseconds();
+            if (PowerBombs == MaxPowerBombs)
+            {
+                AutoRefill_PowerBombs_LastTime = curTime + AUTOREFILL_DELAY;
                 return;
+            }
             if (curTime - AutoRefill_PowerBombs_LastTime <= AUTOREFILL_DELAY)
                 return;
-            PowerBombs++;
-            AutoRefill_PowerBombs_LastTime = curTime;
+            if (PowerBombs + 1 <= MaxPowerBombs)
+            {
+                PowerBombs++;
+                AutoRefill_PowerBombs_LastTime = curTime;
+            }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void AutoRefillHealth()
         {
+            if (MaxHealth == 0 || this.chkBoxLightSuit.Checked)
+                return;
+            int HealthRefill = this.chkBoxDarkSuit.Checked ? 1 : 3;
             long curTime = GetCurTimeInMilliseconds();
             if (Health == MaxHealth)
             {
-                Regenerate_Health_LastTime = curTime + REGEN_HEALTH_COOLDOWN;
-                MessageBox.Show("You have all your HP!");
+                AutoRefill_Health_LastTime = curTime + AUTOREFILL_DELAY;
                 return;
             }
-            if (MaxHealth == 0)
+            if (curTime - AutoRefill_Health_LastTime <= AUTOREFILL_DELAY)
                 return;
-            if (curTime - Regenerate_Health_LastTime <= REGEN_HEALTH_COOLDOWN)
+            for (int i = 0; i < HealthRefill; i++)
             {
-                DateTime remainingTime = new DateTime((REGEN_HEALTH_COOLDOWN - (curTime - Regenerate_Health_LastTime))*TimeSpan.TicksPerMillisecond);
-                MessageBox.Show("You can regenerate in "+(remainingTime.Minute == 0 ? "" : remainingTime.Minute+" minute"+(remainingTime.Minute > 1 ? "s ":" "))+ (remainingTime.Second == 0 ? "" : remainingTime.Second + " second" + (remainingTime.Second > 1 ? "s" : "")));
-                return;
+                if (Health + 1 <= MaxHealth)
+                {
+                    Health++;
+                    AutoRefill_Health_LastTime = curTime;
+                }
             }
-            Health = MaxHealth;
-            Regenerate_Health_LastTime = curTime;
         }
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkBox1.Checked)
+            if (chkBoxDarkMode.Checked)
             {
                 this.BackColor = Color.Black;
                 this.ForeColor = Color.Gray;
@@ -1323,7 +1381,6 @@ namespace MP2RandoAssist
                 this.groupBox3.ForeColor = Color.Gray;
                 this.groupBox4.ForeColor = Color.Gray;
                 this.groupBox5.ForeColor = Color.Gray;
-                this.button1.BackColor = Color.Black;
             }
             else
             {
@@ -1334,15 +1391,19 @@ namespace MP2RandoAssist
                 this.groupBox3.ForeColor = Color.Black;
                 this.groupBox4.ForeColor = Color.Black;
                 this.groupBox5.ForeColor = Color.Gray;
-                this.button1.BackColor = Color.LightGoldenrodYellow;
             }
             if (!IsLoadingSettings)
                 SaveSettings();
         }
 
-        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        private void chkBoxNoAmmoSystem_CheckedChanged(object sender, EventArgs e)
         {
-            AmmoSystem = !checkBox2.Checked;
+            AmmoSystem = !chkBoxNoAmmoSystem.Checked;
+        }
+
+        private void chkBoxPrime1_Dash_CheckedChanged(object sender, EventArgs e)
+        {
+            Prime1_Dash = chkBoxPrime1_Dash.Checked;
         }
     }
 }
